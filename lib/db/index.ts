@@ -21,7 +21,10 @@ function initDb() {
   const databaseUrl = process.env.DATABASE_URL;
 
   if (databaseUrl && !databaseUrl.includes("placeholder")) {
-    const client = postgres(databaseUrl, { max: 10 });
+    const client = postgres(databaseUrl, {
+      max: 10,
+      prepare: false,
+    });
     globalForDb.pgClient = client;
     globalForDb.isPg = true;
     globalForDb.db = drizzlePg(client, { schema });
