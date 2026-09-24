@@ -9,7 +9,8 @@ import {
 } from "@/lib/mock-data";
 import { hashPassword } from "better-auth/crypto";
 
-let isInitialized = false;
+export let isInitialized = false;
+export let lastInitError: string | null = null;
 
 export async function ensureDatabaseSeeded() {
   if (isInitialized) return;
@@ -313,7 +314,8 @@ export async function ensureDatabaseSeeded() {
     }
 
     isInitialized = true;
-  } catch (err) {
+  } catch (err: any) {
+    lastInitError = err?.message || String(err);
     console.error("Database initialization error:", err);
   }
 }

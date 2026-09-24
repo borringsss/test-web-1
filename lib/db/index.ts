@@ -7,7 +7,7 @@ import path from "path";
 import fs from "fs";
 
 // Global singleton to prevent connection exhaustion in Next.js hot reload
-const globalForDb = globalThis as unknown as {
+export const globalForDb = globalThis as unknown as {
   db: any;
   pgClient: any;
   isPg: boolean;
@@ -18,12 +18,22 @@ function initDb() {
     return globalForDb.db;
   }
 
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.SUPABASE_DATABASE_URL ||
+    process.env.POSTGRES_PRISMA_URL;
 
   if (databaseUrl && !databaseUrl.includes("placeholder")) {
+    const isCloud =
+      databaseUrl.includes("supabase") ||
+      databaseUrl.includes("neon") ||
+      databaseUrl.includes("pooler");
+
     const client = postgres(databaseUrl, {
       max: 10,
       prepare: false,
+      ssl: isCloud ? "require" : undefined,
     });
     globalForDb.pgClient = client;
     globalForDb.isPg = true;
@@ -32,8 +42,10 @@ function initDb() {
   }
 
   // Zero-config embedded PostgreSQL engine (PGlite)
-  // Persists data in a local folder '.pglite_data' in the project root
-  const dbPath = path.join(process.cwd(), ".pglite_data");
+  // On Vercel serverless, process.cwd() is read-only, so use /tmp
+  const dbPath = process.env.VERCEL
+    ? path.join("/tmp", ".pglite_data")
+    : path.join(process.cwd(), ".pglite_data");
   
   // Cleanup stale postmaster.pid lock on Windows if process crashed
   try {
