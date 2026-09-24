@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Warm cream base */
+    --background: 38 33% 97%;       /* #FAF8F5 */
+    --foreground: 24 16% 12%;       /* #231E1B */
+
+    --card: 36 29% 98%;             /* #FCFAF7 */
+    --card-foreground: 24 16% 12%;
+
+    --popover: 36 29% 98%;
+    --popover-foreground: 24 16% 12%;
+
+    /* Tomato Rosso */
+    --primary: 8 79% 42%;           /* #C22D16 */
+    --primary-foreground: 0 0% 100%;
+
+    /* Warm stone secondary */
+    --secondary: 35 22% 91%;        /* #EFE6DC */
+    --secondary-foreground: 24 16% 12%;
+
+    --muted: 35 18% 90%;
+    --muted-foreground: 25 8% 45%;
+
+    --accent: 35 22% 91%;
+    --accent-foreground: 24 16% 12%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 35 15% 85%;           /* Soft warm border */
+    --input: 35 15% 85%;
+    --ring: 8 79% 42%;
+
+    --radius: 0.625rem;
+  }
+
+  .dark {
+    --background: 24 20% 7%;
+    --foreground: 36 20% 94%;
+
+    --card: 24 18% 10%;
+    --card-foreground: 36 20% 94%;
+
+    --popover: 24 18% 10%;
+    --popover-foreground: 36 20% 94%;
+
+    --primary: 8 79% 48%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 24 12% 16%;
+    --secondary-foreground: 36 20% 94%;
+
+    --muted: 24 12% 16%;
+    --muted-foreground: 25 8% 65%;
+
+    --accent: 24 12% 16%;
+    --accent-foreground: 36 20% 94%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 24 12% 20%;
+    --input: 24 12% 20%;
+    --ring: 8 79% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground selection:bg-tomato-100 selection:text-tomato-700 antialiased font-sans;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  h1, h2, h3, h4, .font-serif {
+    font-family: var(--font-serif), "Playfair Display", "Georgia", serif;
+  }
+}
+
+/* Custom scrollbar for modern editorial look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D8CCC0;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #BBA999;
+}
