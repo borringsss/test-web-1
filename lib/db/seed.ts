@@ -7,6 +7,7 @@ import {
   INITIAL_SETTINGS,
   INITIAL_RESERVATIONS,
 } from "@/lib/mock-data";
+import { eq, and } from "drizzle-orm";
 import { hashPassword } from "better-auth/crypto";
 
 export let isInitialized = false;
@@ -255,28 +256,61 @@ export async function ensureDatabaseSeeded() {
     }
 
     // 7. Check and seed default Admin User in Better Auth
-    const existingUser = await db.select().from(schema.user);
-    if (existingUser.length === 0) {
-      try {
-        const adminId = "admin-user-1";
-        const hashedPassword = await hashPassword("admin123");
+    try {
+      const adminEmail = "admin@lunionpizza.com";
+      const hashedPassword = await hashPassword("admin123");
+      const existingAdminUsers = await db
+        .select()
+        .from(schema.user)
+        .where(eq(schema.user.email, adminEmail));
+
+      let adminUserId = "admin-user-1";
+
+      if (existingAdminUsers.length === 0) {
         await db.insert(schema.user).values({
-          id: adminId,
+          id: adminUserId,
           name: "L'Union Admin",
-          email: "admin@lunionpizza.com",
+          email: adminEmail,
           emailVerified: true,
           role: "ADMIN",
         });
+      } else {
+        adminUserId = existingAdminUsers[0].id;
+        await db
+          .update(schema.user)
+          .set({ role: "ADMIN", emailVerified: true })
+          .where(eq(schema.user.id, adminUserId));
+      }
+
+      const existingAdminAccounts = await db
+        .select()
+        .from(schema.account)
+        .where(
+          and(
+            eq(schema.account.userId, adminUserId),
+            eq(schema.account.providerId, "credential")
+          )
+        );
+
+      if (existingAdminAccounts.length === 0) {
         await db.insert(schema.account).values({
-          id: "admin-account-1",
-          userId: adminId,
-          accountId: adminId,
+          id: `admin-account-${Date.now()}`,
+          userId: adminUserId,
+          accountId: adminUserId,
           providerId: "credential",
           password: hashedPassword,
         });
-      } catch (e) {
-        console.error("Admin user seed error:", e);
+      } else {
+        await db
+          .update(schema.account)
+          .set({
+            password: hashedPassword,
+            accountId: adminUserId,
+          })
+          .where(eq(schema.account.id, existingAdminAccounts[0].id));
       }
+    } catch (e) {
+      console.error("Admin user seed error:", e);
     }
 
     // 8. Check and seed Reservations

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ShieldCheck, Lock, Mail, ArrowRight, Sparkles, AlertCircle } from "lucide-react";
+import { ShieldCheck, Lock, Mail, ArrowRight, Sparkles, AlertCircle, RefreshCw, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +16,9 @@ export default function AdminLoginPage() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState("");
+  const [successMsg, setSuccessMsg] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+  const [syncing, setSyncing] = React.useState(false);
 
   const { data: session } = authClient.useSession();
 
@@ -28,21 +30,48 @@ export default function AdminLoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
+    if (!cleanEmail || !cleanPassword) {
       setError("Email dan password wajib diisi.");
       return;
     }
 
     setLoading(true);
     setError("");
+    setSuccessMsg("");
 
     try {
       const res = await authClient.signIn.email({
-        email,
-        password,
+        email: cleanEmail,
+        password: cleanPassword,
       });
 
       if (res.error) {
+        console.error("Login error from Better Auth:", res.error);
+
+        // Auto-sync fallback for default demo admin
+        if (cleanEmail === "admin@lunionpizza.com") {
+          try {
+            const syncRes = await fetch("/api/admin/setup");
+            const syncData = await syncRes.json();
+            if (syncData.success) {
+              const retryRes = await authClient.signIn.email({
+                email: cleanEmail,
+                password: cleanPassword,
+              });
+              if (!retryRes.error) {
+                LUnionStore.setAdminLoggedIn(true);
+                router.push("/admin");
+                return;
+              }
+            }
+          } catch (syncErr) {
+            console.error("Auto-sync failed:", syncErr);
+          }
+        }
+
         setError(res.error.message || "Email atau password salah.");
         setLoading(false);
         return;
@@ -60,6 +89,27 @@ export default function AdminLoginPage() {
     setEmail("admin@lunionpizza.com");
     setPassword("admin123");
     setError("");
+  };
+
+  const handleSyncAdmin = async () => {
+    setSyncing(true);
+    setError("");
+    setSuccessMsg("");
+    try {
+      const res = await fetch("/api/admin/setup");
+      const data = await res.json();
+      if (data.success) {
+        setEmail("admin@lunionpizza.com");
+        setPassword("admin123");
+        setSuccessMsg("Akun admin berhasil disinkronkan! Silakan klik 'Masuk ke Back Office'.");
+      } else {
+        setError(data.error || data.details || "Gagal menyinkronkan akun admin.");
+      }
+    } catch (err: any) {
+      setError(err?.message || "Gagal menghubungi server.");
+    } finally {
+      setSyncing(false);
+    }
   };
 
   return (
@@ -96,6 +146,13 @@ export default function AdminLoginPage() {
               </div>
             )}
 
+            {successMsg && (
+              <div className="p-3 rounded-lg bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-xs flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>{successMsg}</span>
+              </div>
+            )}
+
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label className="text-xs text-cream-300 font-medium">Email / Username</Label>
@@ -129,15 +186,16 @@ export default function AdminLoginPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-tomato-600 hover:bg-tomato-700 text-white font-semibold py-3 shadow-md"
+                disabled={loading}
+                className="w-full bg-tomato-600 hover:bg-tomato-700 text-white font-semibold py-3 shadow-md disabled:opacity-70"
               >
-                <span>Masuk ke Back Office</span>
+                <span>{loading ? "Memproses Masuk..." : "Masuk ke Back Office"}</span>
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </form>
 
-            {/* Quick Demo Credentials Helper */}
-            <div className="pt-2 border-t border-charcoal-800">
+            {/* Quick Demo Credentials Helper & Reset */}
+            <div className="pt-2 border-t border-charcoal-800 space-y-2">
               <button
                 type="button"
                 onClick={handleFillDemo}
@@ -145,6 +203,16 @@ export default function AdminLoginPage() {
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                 <span>Isi Kredensial Demo (admin@lunionpizza.com)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSyncAdmin}
+                disabled={syncing}
+                className="w-full py-2 px-3 rounded-lg hover:bg-charcoal-800/50 text-[11px] text-cream-400 hover:text-cream-200 flex items-center justify-center space-x-1.5 transition-colors"
+              >
+                <RefreshCw className={`w-3 h-3 ${syncing ? "animate-spin text-tomato-400" : "text-charcoal-400"}`} />
+                <span>{syncing ? "Menyinkronkan Akun Admin..." : "Sinkronisasi / Reset Akun Admin"}</span>
               </button>
             </div>
           </CardContent>
