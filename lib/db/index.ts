@@ -42,7 +42,20 @@ function initDb() {
   }
 
   // Zero-config embedded PostgreSQL engine (PGlite)
-  // On Vercel serverless, process.cwd() is read-only, so use /tmp
+  // During build phase, use in-memory PGlite to prevent multi-worker lock conflicts
+  const isBuilding =
+    process.env.NEXT_PHASE === "phase-production-build" ||
+    process.env.npm_lifecycle_event === "build";
+
+  if (isBuilding) {
+    const pgliteInstance = new PGlite();
+    globalForDb.pgClient = pgliteInstance;
+    globalForDb.isPg = false;
+    globalForDb.db = drizzlePglite(pgliteInstance, { schema });
+    return globalForDb.db;
+  }
+
+  // On Vercel serverless runtime, process.cwd() is read-only, so use /tmp
   const dbPath = process.env.VERCEL
     ? path.join("/tmp", ".pglite_data")
     : path.join(process.cwd(), ".pglite_data");
@@ -61,6 +74,7 @@ function initDb() {
   globalForDb.db = drizzlePglite(pgliteInstance, { schema });
   return globalForDb.db;
 }
+
 
 export const db = initDb();
 export { schema };

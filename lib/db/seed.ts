@@ -16,6 +16,14 @@ export let lastInitError: string | null = null;
 export async function ensureDatabaseSeeded() {
   if (isInitialized) return;
 
+  // Skip seeding during next build phase so static generation workers don't lock/abort database
+  if (
+    process.env.NEXT_PHASE === "phase-production-build" ||
+    process.env.npm_lifecycle_event === "build"
+  ) {
+    return;
+  }
+
   try {
     await ensureDbReady();
     // 1. Create tables if not existing (DDL query for Postgres / PGlite)
